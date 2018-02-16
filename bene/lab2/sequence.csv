@@ -1,0 +1,16 @@
+Time,Sequence Number,Event
+0,0,send
+0,2,send
+0,4,send
+1,0,transmit
+1.000016,2,transmit
+1.000032,4,transmit
+2.002016,-1000,ack
+2.002016,6,send
+2.002032,-998,ack
+2.002032,8,send
+2.002048,-996,ack
+3.002016,6,transmit
+3.002032,8,transmit
+4.004032,-994,ack
+4.004048,-992,ack
