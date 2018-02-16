@@ -17,12 +17,11 @@ class TCP(Connection):
         # send window; represents the total number of bytes that may
         # be outstanding at one time
         self.window = window
-        self.cur_window = self.window
         # send buffer
         self.send_buffer = SendBuffer()
         # maximum segment size, in bytes
         # self.mss = 1000
-        self.mss = 2
+        self.mss = 1
         # largest sequence number that has been ACKed so far; represents
         # the next sequence number the client expects to receive
         self.sequence = 0
@@ -59,7 +58,6 @@ class TCP(Connection):
     def receive_packet(self, packet):
         print ''
         print 'RECEIVE DATA'
-        print 'length',packet.length
         print 'ack',packet.ack_number
         print 'seq',packet.sequence
 
@@ -72,8 +70,6 @@ class TCP(Connection):
             self.handle_data(packet)
 
     ''' Sender '''
-
-
     def send_on_ack(self):
 
         if not self.send_buffer.available():
@@ -81,20 +77,13 @@ class TCP(Connection):
 
         print ''
         print 'SEND DATA'
-        print 'base_seq',self.send_buffer.base_seq
-        print 'next_seq',self.send_buffer.next_seq
-        print 'last_seq',self.send_buffer.last_seq
-        print 'outstanding',self.send_buffer.outstanding()
 
-        while self.cur_window > 0:
-            self.cur_window -= 1
-
-            print 'GET data'
+        current_window = self.window - self.send_buffer.outstanding()
+        while (current_window > 0):
             next_data = self.send_buffer.get(self.mss)
             print next_data
-
             self.send_packet(next_data[0], next_data[1])
-            self.timer = Sim.scheduler.add(delay=self.timeout, event='retransmit', handler=self.retransmit)
+            current_window -= self.mss
 
     def send(self, data):
         """ Send data on the connection. Called by the application. This
@@ -129,7 +118,7 @@ class TCP(Connection):
 
         # set a timer
         if not self.timer:
-            self.timer = Sim.scheduler.add(delay=self.timeout, event='retransmit', handler=self.retransmit)
+            self.timer = Sim.scheduler.add(delay=self.timeout, event='sequence_' + sequence + 'timeout', handler=self.retransmit)
 
     def handle_ack(self, packet):
         """ Handle an incoming ACK. """
@@ -137,13 +126,12 @@ class TCP(Connection):
         self.trace("%s (%d) received ACK from %d for %d" % (
             self.node.hostname, packet.destination_address, packet.source_address, packet.ack_number))
         # self.cancel_timer() # TODO FIX
-
         self.send_buffer.slide(packet.ack_number)
-        self.cur_window += 1
         self.send_on_ack()
 
     def retransmit(self, event):
         """ Retransmit data. """
+        print event
         self.trace("%s (%d) retransmission timer fired" % (self.node.hostname, self.source_address))
 
     def cancel_timer(self):
@@ -162,17 +150,13 @@ class TCP(Connection):
         self.trace("%s (%d) received TCP segment from %d for %d" % (
             self.node.hostname, packet.destination_address, packet.source_address, packet.sequence))
 
-
         self.receive_buffer.put(packet.body, packet.sequence)
-
 
         self.app.receive_data(packet.body) # send to app
         print 'handle_data'
-        # print len(packet.body)
-        print packet.sequence
-        # print packet.ack_number
+        print packet.sequence + len(packet.body)
 
-        self.ack = packet.sequence # highest consec weve seen
+        self.ack = packet.sequence + len(packet.body) # highest consec weve seen
         self.send_ack()
 
     def send_ack(self):

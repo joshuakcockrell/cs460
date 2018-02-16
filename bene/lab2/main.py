@@ -91,8 +91,8 @@ class Main(object):
         a = AppHandler(self.filename)
 
         # setup connection
-        c1 = TCP(t1, n1.get_address('n2'), 1, n2.get_address('n1'), 1, a, window=3)
-        c2 = TCP(t2, n2.get_address('n1'), 1, n1.get_address('n2'), 1, a, window=3)
+        c1 = TCP(t1, n1.get_address('n2'), 1, n2.get_address('n1'), 1, a, window=2, drop=[0])
+        c2 = TCP(t2, n2.get_address('n1'), 1, n1.get_address('n2'), 1, a, window=2, drop=[0])
 
         # send a file
         with open(self.filename, 'rb') as f:
